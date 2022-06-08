@@ -1,0 +1,16 @@
+
+wt.vcxproj.user
+*.aps
+.vs/wt/v16/.suo
+*.db
+*.ipch
+*.idb
+*.pdb
+*.exe
+*.recipe
+*.ilk
+*.log
+*.obj
+*.res
+*.tlog
+x64/Debug/wt.vcxproj.FileListAbsolute.txt

@@ -60,6 +60,13 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			FillRect(hdc, &r, hbBlack);
 
+			r.left = 100;
+			r.top = 100;
+			r.right = 1000;
+			r.bottom = 200;
+
+			DrawText(hdc, "blabla", 6, &r, 0);
+
 			EndPaint(hWnd, &ps);
 		}
 		break;
