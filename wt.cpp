@@ -1,9 +1,12 @@
 #include "framework.h"
 #include "wt.h"
+#include <stdio.h>
 
 HINSTANCE hInst;
 HWND hWnd;
-
+RECT memRect;
+HDC memDC = NULL;
+HBITMAP memBM = NULL;
 HBRUSH hbBlack = NULL;
 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -45,27 +48,65 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	
 	case WM_PAINT:
 		{
+			RECT cr;
 			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hWnd, &ps);
 
-			if (hbBlack == NULL)
-				hbBlack = CreateSolidBrush((0, 0, 0));
+			if (hdc != NULL)
+			{
+				GetClientRect(hWnd, &cr);
 
-			RECT r;
+				if (memBM != NULL)
+				{
+					if (cr.right != memRect.right || cr.bottom != memRect.bottom)
+					{
+						DeleteObject(memBM);
+						DeleteDC(memDC);
 
-			r.left = 10;
-			r.top = 10;
-			r.right = 70;
-			r.bottom = 30;
+						memDC = NULL;
+						memBM = NULL;
+					}
+				}
 
-			FillRect(hdc, &r, hbBlack);
+				if (memDC == NULL)
+					memDC = CreateCompatibleDC(hdc);
 
-			r.left = 100;
-			r.top = 100;
-			r.right = 1000;
-			r.bottom = 200;
+				if (memDC != NULL)
+				{
+					if (memBM == NULL)
+					{
+						memRect = cr;
 
-			DrawText(hdc, "blabla", 6, &r, 0);
+						memBM = CreateCompatibleBitmap(hdc, memRect.right, memRect.bottom);
+						SelectObject(memDC, memBM);
+
+						char s[64];
+						sprintf_s(s, "[%u x %u]", memRect.right, memRect.bottom);
+						SetWindowText(hWnd, s);
+					}
+
+					if (memBM != NULL)
+					{
+						for (int y = 0; y < 256; y++)
+							for (int x = 0; x < 256; x++)
+								SetPixel(memDC, x, y, RGB(x, y, 0));
+
+						for (int y = 0; y < 256; y++)
+							for (int x = 0; x < 256; x++)
+								SetPixel(memDC, 256 + x, y, RGB(0, x, y));
+
+						for (int y = 0; y < 256; y++)
+							for (int x = 0; x < 256; x++)
+								SetPixel(memDC, x, y+256, RGB(x, 0, y));
+
+						for (int y = 0; y < 256; y++)
+							for (int x = 0; x < 256; x++)
+								SetPixel(memDC, x + 256, y + 256, RGB(x, x, x));
+
+						BitBlt(hdc, 0, 0, memRect.right, memRect.bottom, memDC, 0, 0, SRCCOPY);
+					}
+				}
+			}
 
 			EndPaint(hWnd, &ps);
 		}

@@ -14,3 +14,6 @@ wt.vcxproj.user
 *.res
 *.tlog
 x64/Debug/wt.vcxproj.FileListAbsolute.txt
+*.opendb
+*.db-shm
+*.db-wal
