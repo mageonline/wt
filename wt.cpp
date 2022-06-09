@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "wt.h"
 #include <stdio.h>
+#include <windowsx.h>
 
 HINSTANCE hInst;
 HWND hWnd;
@@ -8,6 +9,8 @@ RECT memRect;
 HDC memDC = NULL;
 HBITMAP memBM = NULL;
 HBRUSH hbBlack = NULL;
+POINT mouse;
+HBRUSH whiteBrush = NULL;
 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -46,6 +49,26 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	
+	case WM_LBUTTONDOWN:
+	case WM_MOUSEMOVE:
+	{
+			POINT pt;
+			pt.x = GET_X_LPARAM(lParam);
+			pt.y = GET_Y_LPARAM(lParam);
+
+			char s[64];
+			sprintf_s(s, "[%u x %u]", pt.x, pt.y);
+			SetWindowText(hWnd, s);
+
+			if (memBM != NULL)
+			{
+//				SetPixel(memDC, pt.x, pt.y, RGB(255, 0, 0));
+				LineTo(memDC, pt.x, pt.y);
+				InvalidateRect(hWnd, NULL, false);
+			}
+		}
+		break;
+
 	case WM_PAINT:
 		{
 			RECT cr;
@@ -55,6 +78,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (hdc != NULL)
 			{
 				GetClientRect(hWnd, &cr);
+
+				if (whiteBrush == NULL)
+					whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
 
 				if (memBM != NULL)
 				{
@@ -80,29 +106,11 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						memBM = CreateCompatibleBitmap(hdc, memRect.right, memRect.bottom);
 						SelectObject(memDC, memBM);
 
-						char s[64];
-						sprintf_s(s, "[%u x %u]", memRect.right, memRect.bottom);
-						SetWindowText(hWnd, s);
+						FillRect(memDC, &memRect, whiteBrush);
 					}
 
 					if (memBM != NULL)
 					{
-						for (int y = 0; y < 256; y++)
-							for (int x = 0; x < 256; x++)
-								SetPixel(memDC, x, y, RGB(x, y, 0));
-
-						for (int y = 0; y < 256; y++)
-							for (int x = 0; x < 256; x++)
-								SetPixel(memDC, 256 + x, y, RGB(0, x, y));
-
-						for (int y = 0; y < 256; y++)
-							for (int x = 0; x < 256; x++)
-								SetPixel(memDC, x, y+256, RGB(x, 0, y));
-
-						for (int y = 0; y < 256; y++)
-							for (int x = 0; x < 256; x++)
-								SetPixel(memDC, x + 256, y + 256, RGB(x, x, x));
-
 						BitBlt(hdc, 0, 0, memRect.right, memRect.bottom, memDC, 0, 0, SRCCOPY);
 					}
 				}
