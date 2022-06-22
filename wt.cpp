@@ -11,6 +11,8 @@ HBITMAP memBM = NULL;
 HBRUSH hbBlack = NULL;
 POINT mouse;
 HBRUSH whiteBrush = NULL;
+int bigtile_length;
+unsigned char* bigtile_data = NULL;
 
 unsigned char * LoadFile(const char* filename, int * bytes)
 {
@@ -23,14 +25,16 @@ unsigned char * LoadFile(const char* filename, int * bytes)
 	if (f != NULL)
 	{
 		// seek to the last byte of the file to find out its length
-		int length = fseek(f, 0, SEEK_END);
+		fseek(f, 0, SEEK_END);
+
+		int length = ftell(f);
+
+		// seek the file pointer back to the beginning
+		fseek(f, 0, SEEK_SET);
 
 		// check if the file is nonzero to avoid requesting and reading zero bytes later
 		if (length > 0)
 		{
-			// seek the file pointer back to the beginning
-			fseek(f, 0, SEEK_SET);
-
 			// allocate the required amount of memory
 			buffer = (unsigned char*)malloc(length);
 
@@ -38,7 +42,9 @@ unsigned char * LoadFile(const char* filename, int * bytes)
 			if (buffer != NULL)
 			{
 				// read the entire file into the allocated memory buffer and check that we managed to read all of it by comparing to length
-				if (fread(buffer, length, 1, f) != length)
+				int actual = fread(buffer, 1, length, f);
+
+				if (actual != length)
 				{
 					// something went wrong with reading, we couldn't read the entire file. release allocated memory and clear the buffer pointer (we would return invalid memory otherwise)
 					free(buffer);
@@ -56,8 +62,18 @@ unsigned char * LoadFile(const char* filename, int * bytes)
 		fclose(f);
 	}
 
-	// finally return the buffer pointer which can be NULL in case something went wrong
+	// finally return the buffer pointer which can be NULL in case something went wrongtr
 	return buffer;
+}
+
+COLORREF GetDataValue(int x, int y)
+{
+	if (bigtile_data == NULL)
+		return RGB(0, 0, 0);
+
+	unsigned char* p = bigtile_data + (y * 512 + x) * 4;
+
+	return RGB(p[0], p[1], p[2]);
 }
 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -186,6 +202,10 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						SelectObject(memDC, memBM);
 
 						FillRect(memDC, &memRect, whiteBrush);
+
+						for (int y = 0; y < 512; y++)
+							for (int x = 0; x < 512; x++)
+								SetPixel(memDC, x, y, GetDataValue(x, y));
 					}
 
 					if (memBM != NULL)
@@ -213,6 +233,8 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
 	WNDCLASSEX rc;
+
+	bigtile_data = LoadFile("bigtile.raw", &bigtile_length);
 
 	hInst = hInstance;
 
