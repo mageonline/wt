@@ -12,6 +12,54 @@ HBRUSH hbBlack = NULL;
 POINT mouse;
 HBRUSH whiteBrush = NULL;
 
+unsigned char * LoadFile(const char* filename, int * bytes)
+{
+	unsigned char* buffer = NULL;
+
+	// open the file in binary read mode (we do not plan to write it)
+	FILE * f = fopen(filename, "rb");
+
+	// does the file exist at all?
+	if (f != NULL)
+	{
+		// seek to the last byte of the file to find out its length
+		int length = fseek(f, 0, SEEK_END);
+
+		// check if the file is nonzero to avoid requesting and reading zero bytes later
+		if (length > 0)
+		{
+			// seek the file pointer back to the beginning
+			fseek(f, 0, SEEK_SET);
+
+			// allocate the required amount of memory
+			buffer = (unsigned char*)malloc(length);
+
+			// did we succeed at allocating?
+			if (buffer != NULL)
+			{
+				// read the entire file into the allocated memory buffer and check that we managed to read all of it by comparing to length
+				if (fread(buffer, length, 1, f) != length)
+				{
+					// something went wrong with reading, we couldn't read the entire file. release allocated memory and clear the buffer pointer (we would return invalid memory otherwise)
+					free(buffer);
+					buffer = NULL;
+				}
+				// we managed to read all the file, now check if user wanted us to return the length too by checking the pointer value is not NULL
+				else if (bytes != NULL)
+				{
+					// write the length to the pointed memory
+					*bytes = length;
+				}
+			}
+		}
+		// close the file descriptor to avoid Windows leaking file descriptors!
+		fclose(f);
+	}
+
+	// finally return the buffer pointer which can be NULL in case something went wrong
+	return buffer;
+}
+
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -50,20 +98,51 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	
 	case WM_LBUTTONDOWN:
+	{
+		POINT pt;
+		pt.x = GET_X_LPARAM(lParam);
+		pt.y = GET_Y_LPARAM(lParam);
+
+		char s[64];
+		sprintf_s(s, "[%u x %u] LB", pt.x, pt.y);
+		SetWindowText(hWnd, s);
+
+		if (memBM != NULL)
+		{
+			COLORREF a = GetPixel(memDC, pt.x, pt.y);
+
+			a += 8;
+
+			SetPixel(memDC, pt.x, pt.y, a);
+			SetPixel(memDC, pt.x+1, pt.y, a);
+			SetPixel(memDC, pt.x, pt.y+1, a);
+			SetPixel(memDC, pt.x+1, pt.y+1, a);
+
+			//LineTo(memDC, pt.x, pt.y);
+			InvalidateRect(hWnd, NULL, false);
+		}
+	}
+	break;
+
 	case WM_MOUSEMOVE:
 	{
-			POINT pt;
-			pt.x = GET_X_LPARAM(lParam);
-			pt.y = GET_Y_LPARAM(lParam);
+			int x = GET_X_LPARAM(lParam);
+			int y = GET_Y_LPARAM(lParam);
 
 			char s[64];
-			sprintf_s(s, "[%u x %u]", pt.x, pt.y);
+			sprintf_s(s, "[%u x %u]", x, y);
 			SetWindowText(hWnd, s);
 
 			if (memBM != NULL)
 			{
 //				SetPixel(memDC, pt.x, pt.y, RGB(255, 0, 0));
-				LineTo(memDC, pt.x, pt.y);
+				COLORREF a = GetPixel(memDC, x, y);
+
+				a += 8;
+
+				SetPixel(memDC, x, y, a);
+
+//				LineTo(memDC, x, y);
 				InvalidateRect(hWnd, NULL, false);
 			}
 		}
